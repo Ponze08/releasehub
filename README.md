@@ -1,68 +1,45 @@
 # ReleaseHub
 
-**Enterprise release & change management dashboard — portfolio project by Andrea Ponzellini.**
+**Release & change management dashboard built with JavaScript, ASP.NET Core 8, EF Core and SQL Server.**
 
-ReleaseHub is a polished demo application for planning, tracking and auditing software releases across environments. It is designed to look and behave like a real internal enterprise tool while remaining completely self-contained and safe to publish publicly.
+ReleaseHub is a portfolio project for planning, tracking and auditing software releases across multiple applications and environments. The browser interface can run as a self-contained demo, while the backend provides a real ASP.NET Core API with persistent storage support.
 
 ## Highlights
 
-- Dashboard with release KPIs, deployment volume and release health
+- Release dashboard with KPIs, deployment volume and release health
 - Search and multi-dimensional filtering
 - Create, edit, delete and advance release status
 - Risk, environment and status classification
-- Persistent demo state using browser `localStorage`
 - Chronological audit trail
 - CSV release export and JSON activity export
-- Responsive layout and dark mode
-- Keyboard shortcut: `/` or `Ctrl/Cmd + K` focuses search
-- No frontend framework or runtime dependency required
-- Companion .NET 8 minimal API source
-- SQL Server reference schema with constraints and indexes
+- Responsive layout, dark mode and keyboard shortcuts
+- ASP.NET Core 8 Minimal API
+- EF Core persistence with SQL Server support
+- In-memory database fallback for zero-configuration development
+- Swagger/OpenAPI in Development
+- Configurable CORS policy
+- Automated API service tests
+- GitHub Actions build and test pipeline
 
-## Tech stack
+## Architecture
 
-### Runnable demo
-- HTML5
-- CSS3
-- JavaScript (ES2021+)
-- Browser localStorage
-
-### Backend reference implementation
-- C#
-- ASP.NET Core 8 minimal API
-- Dependency injection
-- Repository abstraction
-
-### Database design
-- Microsoft SQL Server
-- Relational constraints
-- Indexing
-- Audit/activity model
-
-## Run the demo
-
-The easiest option is simply to open `index.html` in a modern browser.
-
-For a local HTTP server:
-
-```bash
-python -m http.server 8080
+```text
+Browser UI
+  HTML / CSS / JavaScript
+          │
+          │ optional REST integration
+          ▼
+ASP.NET Core 8 API
+          │
+          ▼
+      EF Core
+      ┌───┴────────────┐
+      │                │
+SQL Server       InMemory provider
+production       local/demo fallback
 ```
 
-Then open `http://localhost:8080`.
-
-On Windows you can also run `start-demo.bat`.
-
-## Run the API
-
-Requires the .NET 8 SDK:
-
-```bash
-cd backend/ReleaseHub.Api
-dotnet run
-```
-
-The API uses an in-memory repository by default, so no database is required to explore the C# code or endpoints.
+The static UI keeps a `localStorage` fallback so the public demo remains usable even when the API is not deployed. When an API base URL is configured, release CRUD and audit data are synchronized through the ASP.NET Core backend.
 
 ## Project structure
 
@@ -72,21 +49,106 @@ releasehub/
 ├─ assets/
 │  ├─ css/styles.css
 │  └─ js/
-│     ├─ data.js
-│     └─ app.js
-├─ backend/ReleaseHub.Api/
+│     ├─ app.js
+│     ├─ config.js
+│     └─ data.js
+├─ backend/
+│  ├─ ReleaseHub.Api/
+│  │  ├─ Data/
+│  │  ├─ Models/
+│  │  └─ Services/
+│  └─ ReleaseHub.Api.Tests/
 ├─ database/schema.sql
 ├─ docs/ARCHITECTURE.md
-├─ start-demo.bat
-└─ README.md
+└─ .github/workflows/ci.yml
 ```
 
-## Why this project exists
+## Run the frontend
 
-The goal is to demonstrate practical software-development skills through a compact project that combines UI engineering, state management, CRUD workflows, auditability, API design and relational database modeling.
+The quickest option is to open `index.html` directly in a modern browser.
 
-The data and company/application names in the demo are fictional.
+For a local HTTP server:
 
-## Portfolio note
+```bash
+python -m http.server 8080
+```
 
-If you publish this repository, consider enabling GitHub Pages for the root folder or deploying it to Netlify so the LinkedIn Featured card can point directly to a live demo.
+Then open `http://localhost:8080`.
+
+On Windows you can also run:
+
+```text
+start-demo.bat
+```
+
+## Run the API
+
+Requires the .NET 8 SDK.
+
+```bash
+cd backend/ReleaseHub.Api
+dotnet run
+```
+
+With no SQL Server connection string configured, the API automatically uses EF Core's in-memory provider.
+
+Swagger UI is available in the Development environment at:
+
+```text
+/swagger
+```
+
+The health endpoint is:
+
+```text
+/health
+```
+
+## SQL Server configuration
+
+Set the `ConnectionStrings__ReleaseHub` environment variable or configure `ConnectionStrings:ReleaseHub` in your local application settings.
+
+Example format:
+
+```text
+Server=localhost;Database=ReleaseHub;Trusted_Connection=True;TrustServerCertificate=True;
+```
+
+`database/schema.sql` documents the corresponding relational model, constraints and indexes.
+
+## Connect the frontend to the API
+
+The frontend reads `window.RELEASEHUB_CONFIG.apiBaseUrl`. Set it to the API origin before `app.js` is loaded, for example:
+
+```javascript
+window.RELEASEHUB_CONFIG = {
+  apiBaseUrl: "https://api.example.com"
+};
+```
+
+If the API cannot be reached, the app safely falls back to the local demo workspace.
+
+## Run tests
+
+```bash
+cd backend/ReleaseHub.Api.Tests
+dotnet test
+```
+
+The test suite verifies release creation, status-change auditing and delete behavior. GitHub Actions runs the build and tests for feature branches and pull requests.
+
+## Security and resilience details
+
+- Browser-rendered user content is HTML-escaped before insertion.
+- CSV exports neutralize spreadsheet formula prefixes to reduce CSV injection risk.
+- API input is validated for required fields, maximum lengths and known enum-like values.
+- CORS origins are configurable instead of being hardcoded into application logic.
+- Demo seed dates are generated relative to the current date so the dashboard remains current.
+
+## Data
+
+All names, applications and release records used in the demo are fictional sample data created for this project. No company source code or internal production data is included.
+
+## License
+
+MIT
