@@ -1,50 +1,60 @@
 # ReleaseHub architecture
 
-ReleaseHub is intentionally split into three layers so the portfolio demo is easy to open while still showing how the application can evolve into a conventional enterprise stack.
+ReleaseHub is split into a browser client, an ASP.NET Core API and a persistence layer. The static client keeps a local fallback so the portfolio demo remains usable without infrastructure, while the backend demonstrates a conventional .NET application path to SQL Server.
 
-## 1. Browser demo
+## 1. Browser client
 
-The root `index.html` contains the runnable showcase. It uses plain HTML, CSS and JavaScript with no build step or third-party runtime dependencies.
+The root `index.html` uses plain HTML, CSS and JavaScript with no frontend build step.
 
-- State is persisted in `localStorage`.
-- Seed data is defined in `assets/js/data.js`.
-- UI state, filtering, CRUD operations, exports and audit logging live in `assets/js/app.js`.
-- The interface is responsive and supports light/dark themes.
-
-This mode is ideal for GitHub Pages, Netlify or any static host.
+- `assets/js/data.js` generates fictional seed data relative to the current date.
+- `assets/js/app.js` owns UI state, filtering, CRUD workflows, exports and audit rendering.
+- The UI can synchronize release data with the ASP.NET Core API when an API base URL is configured.
+- If the API is unavailable, the browser falls back to `localStorage` so the demo stays functional.
+- User-controlled values are escaped before HTML insertion.
+- CSV export neutralizes spreadsheet formula prefixes.
 
 ## 2. ASP.NET Core API
 
-`backend/ReleaseHub.Api` is a small .NET 8 minimal API that exposes CRUD endpoints for releases.
-
-The service layer is deliberately abstracted behind `IReleaseService`. The included implementation is in-memory, keeping the repository self-contained and package-free. In a production implementation, the same interface can be backed by EF Core, Dapper or a custom SQL Server repository.
+`backend/ReleaseHub.Api` targets .NET 8 and exposes release CRUD plus audit activity.
 
 Endpoints:
 
+- `GET /health`
 - `GET /api/releases`
 - `GET /api/releases/{id}`
 - `POST /api/releases`
 - `PUT /api/releases/{id}`
 - `DELETE /api/releases/{id}`
+- `GET /api/activity`
 
-## 3. SQL Server model
+The API uses dependency injection and an asynchronous `IReleaseService` abstraction. `ReleaseService` contains the application workflow and writes both release changes and audit records through EF Core.
 
-`database/schema.sql` contains a production-oriented SQL Server schema with:
+Swagger/OpenAPI is enabled in the Development environment.
 
-- strongly constrained status, risk and environment values;
-- deployment-focused indexes;
-- a separate append-style activity table for auditability;
-- foreign-key behavior that preserves audit records after a release is deleted.
+## 3. Persistence
+
+`ReleaseHubDbContext` maps releases and audit activity with EF Core.
+
+- If `ConnectionStrings:ReleaseHub` is configured, the API uses the SQL Server provider.
+- If no connection string is configured, it uses the EF Core InMemory provider for zero-configuration development.
+- `database/schema.sql` documents the corresponding SQL Server schema, constraints and indexes.
+
+This keeps the repository easy to run while still providing a real persistence path.
+
+## 4. Automated verification
+
+`backend/ReleaseHub.Api.Tests` verifies core persistence behavior including creation, status-change auditing and deletion.
+
+`.github/workflows/ci.yml` restores, builds and tests the .NET projects on feature branches and pull requests.
 
 ## Production evolution
 
-A realistic next step would be:
+The next production-oriented steps would be:
 
-1. add authentication/authorization;
-2. replace the in-memory repository with SQL Server persistence;
-3. add optimistic concurrency and server-side audit logging;
-4. connect the browser UI to the API;
-5. add automated tests and CI/CD;
-6. deploy the frontend and API separately behind HTTPS.
-
-The current implementation is kept intentionally compact so recruiters can understand the full project quickly.
+1. add authentication and role-based authorization;
+2. add EF Core migrations and deployment-time migration handling;
+3. add optimistic concurrency for release updates;
+4. deploy the frontend and API behind HTTPS;
+5. add structured logging and telemetry;
+6. add end-to-end browser tests;
+7. add environment-specific secret management.
