@@ -4,9 +4,10 @@ namespace ReleaseHub.Api.Services;
 
 public interface IReleaseService
 {
-    IReadOnlyCollection<ReleaseItem> GetAll();
-    ReleaseItem? Get(Guid id);
-    ReleaseItem Create(UpsertReleaseRequest request);
-    ReleaseItem? Update(Guid id, UpsertReleaseRequest request);
-    bool Delete(Guid id);
+    Task<IReadOnlyCollection<ReleaseItem>> GetAllAsync(CancellationToken cancellationToken = default);
+    Task<ReleaseItem?> GetAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<ReleaseItem> CreateAsync(UpsertReleaseRequest request, CancellationToken cancellationToken = default);
+    Task<ReleaseItem?> UpdateAsync(Guid id, UpsertReleaseRequest request, CancellationToken cancellationToken = default);
+    Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<IReadOnlyCollection<ReleaseActivity>> GetActivityAsync(CancellationToken cancellationToken = default);
 }

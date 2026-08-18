@@ -1,0 +1,31 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, "feature/**" ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore API
+        run: dotnet restore backend/ReleaseHub.Api/ReleaseHub.Api.csproj
+
+      - name: Restore tests
+        run: dotnet restore backend/ReleaseHub.Api.Tests/ReleaseHub.Api.Tests.csproj
+
+      - name: Build API
+        run: dotnet build backend/ReleaseHub.Api/ReleaseHub.Api.csproj --configuration Release --no-restore
+
+      - name: Test
+        run: dotnet test backend/ReleaseHub.Api.Tests/ReleaseHub.Api.Tests.csproj --configuration Release --no-restore --verbosity normal
