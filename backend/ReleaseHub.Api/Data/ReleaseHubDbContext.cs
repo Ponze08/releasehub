@@ -35,5 +35,10 @@ public sealed class ReleaseHubDbContext(DbContextOptions<ReleaseHubDbContext> op
         activity.Property(x => x.CreatedAt).IsRequired();
         activity.HasIndex(x => x.CreatedAt);
         activity.HasIndex(x => new { x.ReleaseId, x.CreatedAt });
+        activity
+            .HasOne<ReleaseItem>()
+            .WithMany()
+            .HasForeignKey(x => x.ReleaseId)
+            .OnDelete(DeleteBehavior.SetNull);
     }
 }
