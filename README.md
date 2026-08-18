@@ -5,6 +5,8 @@
 
 **Release & change management dashboard built with JavaScript, ASP.NET Core 8, EF Core and SQL Server.**
 
+**Live demo:** https://ponze08.github.io/releasehub/
+
 ReleaseHub is a portfolio project for planning, tracking and auditing software releases across multiple applications and environments. The browser interface can run as a self-contained demo, while the backend provides a real ASP.NET Core API with persistent storage support.
 
 ## Highlights
