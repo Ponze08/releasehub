@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="ReleaseHub — a polished enterprise release and change management dashboard." />
+  <meta name="theme-color" content="#0b1220" />
+  <title>ReleaseHub — Release & Change Management</title>
+  <link rel="stylesheet" href="assets/css/styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Primary navigation">
+      <div class="brand-row">
+        <a class="brand" href="#" data-nav="dashboard" aria-label="ReleaseHub home">
+          <span class="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 32 32" role="img"><path d="M16 3 27 9.5v13L16 29 5 22.5v-13L16 3Zm0 4.1-7.4 4.3v8.7l7.4 4.3 7.4-4.3v-8.7L16 7.1Zm0 3.2 4.5 2.6v5.2L16 20.7l-4.5-2.6v-5.2l4.5-2.6Z"/></svg>
+          </span>
+          <span>ReleaseHub</span>
+        </a>
+        <button class="icon-button mobile-only" id="closeSidebar" aria-label="Close navigation">
+          <span aria-hidden="true">×</span>
+        </button>
+      </div>
+
+      <nav class="nav-list">
+        <button class="nav-item active" data-nav="dashboard">
+          <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 13h6V4H4v9Zm0 7h6v-5H4v5Zm10 0h6v-9h-6v9Zm0-16v5h6V4h-6Z"/></svg></span>
+          <span>Dashboard</span>
+        </button>
+        <button class="nav-item" data-nav="releases">
+          <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m12 2 9 5-9 5-9-5 9-5Zm-7 9.1 7 3.9 7-3.9v3L12 18l-7-3.9v-3Zm0 6L12 21l7-3.9v3L12 24l-7-3.9v-3Z"/></svg></span>
+          <span>Releases</span>
+          <span class="nav-badge" id="releaseCountBadge">0</span>
+        </button>
+        <button class="nav-item" data-nav="activity">
+          <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 8a4 4 0 1 1 0 8 4 4 0 0 1 0-8Zm0-6 2 3.2 3.7-.4.8 3.6 3.4 1.6-1.7 3.3 1.7 3.3-3.4 1.6-.8 3.6-3.7-.4L12 24l-2-3.2-3.7.4-.8-3.6L2.1 16l1.7-3.3L2.1 9.4l3.4-1.6.8-3.6 3.7.4L12 2Z"/></svg></span>
+          <span>Activity</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-spacer"></div>
+
+      <div class="sidebar-card">
+        <div class="sidebar-card-icon" aria-hidden="true">↗</div>
+        <p class="sidebar-card-title">Demo workspace</p>
+        <p class="sidebar-card-text">All changes are stored locally in your browser.</p>
+        <button class="text-button" id="resetDemo">Reset demo data</button>
+      </div>
+
+      <div class="profile-chip">
+        <div class="avatar">AP</div>
+        <div class="profile-meta">
+          <strong>Andrea Ponzellini</strong>
+          <span>Software Developer</span>
+        </div>
+      </div>
+    </aside>
+
+    <div class="main-column">
+      <header class="topbar">
+        <div class="topbar-left">
+          <button class="icon-button mobile-only" id="openSidebar" aria-label="Open navigation">
+            <span aria-hidden="true">☰</span>
+          </button>
+          <div>
+            <p class="eyebrow" id="pageEyebrow">Release operations</p>
+            <h1 id="pageTitle">Dashboard</h1>
+          </div>
+        </div>
+
+        <div class="topbar-actions">
+          <label class="global-search" aria-label="Search releases">
+            <span class="search-icon" aria-hidden="true">⌕</span>
+            <input id="globalSearch" type="search" placeholder="Search releases…" autocomplete="off" />
+            <kbd>/</kbd>
+          </label>
+          <button class="icon-button" id="themeToggle" aria-label="Toggle theme" title="Toggle theme">
+            <span id="themeGlyph" aria-hidden="true">◐</span>
+          </button>
+          <button class="button secondary desktop-only" id="exportCsv">Export CSV</button>
+          <button class="button primary" id="newReleaseTop">+ New release</button>
+        </div>
+      </header>
+
+      <main class="content">
+        <section class="page active" id="page-dashboard" data-page="dashboard">
+          <div class="hero-row">
+            <div>
+              <p class="section-kicker">Live overview</p>
+              <h2>Keep every release on track.</h2>
+              <p class="section-subtitle">Plan, monitor and audit deployments across applications and environments from one place.</p>
+            </div>
+            <div class="hero-meta">
+              <span class="live-dot"></span>
+              <span>Demo data synced locally</span>
+            </div>
+          </div>
+
+          <div class="stats-grid" id="statsGrid" aria-label="Release metrics"></div>
+
+          <div class="dashboard-grid">
+            <section class="panel chart-panel">
+              <div class="panel-header">
+                <div>
+                  <p class="panel-label">Deployment volume</p>
+                  <h3>Last 7 days</h3>
+                </div>
+                <span class="status-pill neutral" id="chartTotal">0 releases</span>
+              </div>
+              <div class="bar-chart" id="deploymentChart" aria-label="Deployment volume chart"></div>
+            </section>
+
+            <section class="panel health-panel">
+              <div class="panel-header">
+                <div>
+                  <p class="panel-label">Release health</p>
+                  <h3>Current portfolio</h3>
+                </div>
+              </div>
+              <div class="health-ring-wrap">
+                <div class="health-ring" id="healthRing" role="img" aria-label="Release success rate">
+                  <div class="health-ring-inner">
+                    <strong id="healthPercent">0%</strong>
+                    <span>success</span>
+                  </div>
+                </div>
+                <div class="health-legend" id="healthLegend"></div>
+              </div>
+            </section>
+          </div>
+
+          <div class="dashboard-grid lower">
+            <section class="panel table-panel">
+              <div class="panel-header">
+                <div>
+                  <p class="panel-label">Priority queue</p>
+                  <h3>Upcoming & active releases</h3>
+                </div>
+                <button class="text-button" data-nav="releases">View all</button>
+              </div>
+              <div class="table-wrap compact-table-wrap">
+                <table class="data-table compact" aria-label="Upcoming releases">
+                  <thead>
+                    <tr>
+                      <th>Release</th>
+                      <th>Environment</th>
+                      <th>Status</th>
+                      <th>Planned</th>
+                    </tr>
+                  </thead>
+                  <tbody id="priorityTableBody"></tbody>
+                </table>
+              </div>
+            </section>
+
+            <section class="panel activity-mini-panel">
+              <div class="panel-header">
+                <div>
+                  <p class="panel-label">Recent activity</p>
+                  <h3>Audit trail</h3>
+                </div>
+                <button class="text-button" data-nav="activity">Open log</button>
+              </div>
+              <div class="activity-list" id="activityMiniList"></div>
+            </section>
+          </div>
+        </section>
+
+        <section class="page" id="page-releases" data-page="releases">
+          <div class="page-toolbar">
+            <div>
+              <p class="section-kicker">Release inventory</p>
+              <h2>All releases</h2>
+              <p class="section-subtitle">Filter, review and update every planned or completed deployment.</p>
+            </div>
+            <button class="button primary" id="newReleasePage">+ New release</button>
+          </div>
+
+          <section class="panel releases-panel">
+            <div class="filters-row">
+              <label class="filter-search">
+                <span aria-hidden="true">⌕</span>
+                <input type="search" id="releaseSearch" placeholder="Search by app, version or owner…" />
+              </label>
+              <select id="statusFilter" aria-label="Filter by status">
+                <option value="all">All statuses</option>
+                <option value="Planned">Planned</option>
+                <option value="Ready">Ready</option>
+                <option value="In Progress">In Progress</option>
+                <option value="Completed">Completed</option>
+                <option value="Failed">Failed</option>
+              </select>
+              <select id="environmentFilter" aria-label="Filter by environment">
+                <option value="all">All environments</option>
+                <option value="Production">Production</option>
+                <option value="Staging">Staging</option>
+                <option value="QA">QA</option>
+                <option value="Development">Development</option>
+              </select>
+              <select id="riskFilter" aria-label="Filter by risk">
+                <option value="all">All risks</option>
+                <option value="Low">Low risk</option>
+                <option value="Medium">Medium risk</option>
+                <option value="High">High risk</option>
+              </select>
+              <button class="button secondary small" id="clearFilters">Clear</button>
+            </div>
+
+            <div class="table-wrap">
+              <table class="data-table" aria-label="Release list">
+                <thead>
+                  <tr>
+                    <th>Application / Version</th>
+                    <th>Environment</th>
+                    <th>Owner</th>
+                    <th>Risk</th>
+                    <th>Status</th>
+                    <th>Planned</th>
+                    <th class="align-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="releasesTableBody"></tbody>
+              </table>
+              <div class="empty-state hidden" id="releaseEmptyState">
+                <div class="empty-icon">⌕</div>
+                <h3>No releases found</h3>
+                <p>Try clearing the filters or create a new release.</p>
+              </div>
+            </div>
+            <div class="table-footer">
+              <span id="releaseResultCount">0 releases</span>
+              <span>Local demo workspace</span>
+            </div>
+          </section>
+        </section>
+
+        <section class="page" id="page-activity" data-page="activity">
+          <div class="page-toolbar">
+            <div>
+              <p class="section-kicker">Auditability</p>
+              <h2>Activity log</h2>
+              <p class="section-subtitle">A chronological record of release changes in this demo workspace.</p>
+            </div>
+            <button class="button secondary" id="exportActivity">Export JSON</button>
+          </div>
+
+          <section class="panel activity-panel">
+            <div class="activity-filter-row">
+              <label class="filter-search">
+                <span aria-hidden="true">⌕</span>
+                <input type="search" id="activitySearch" placeholder="Search activity…" />
+              </label>
+              <select id="activityTypeFilter" aria-label="Filter activity type">
+                <option value="all">All activity</option>
+                <option value="Created">Created</option>
+                <option value="Updated">Updated</option>
+                <option value="Status">Status changes</option>
+                <option value="Deleted">Deleted</option>
+              </select>
+            </div>
+            <div class="timeline" id="activityTimeline"></div>
+          </section>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <div class="modal-backdrop hidden" id="releaseModalBackdrop" role="presentation">
+    <section class="modal" id="releaseModal" role="dialog" aria-modal="true" aria-labelledby="releaseModalTitle">
+      <div class="modal-header">
+        <div>
+          <p class="panel-label" id="releaseModalLabel">Release details</p>
+          <h2 id="releaseModalTitle">Create release</h2>
+        </div>
+        <button class="icon-button" id="closeReleaseModal" aria-label="Close dialog">×</button>
+      </div>
+
+      <form id="releaseForm">
+        <input type="hidden" id="releaseId" />
+        <div class="form-grid">
+          <label class="field span-2">
+            <span>Application</span>
+            <input id="applicationInput" type="text" maxlength="60" placeholder="e.g. Customer Portal" required />
+          </label>
+          <label class="field">
+            <span>Version</span>
+            <input id="versionInput" type="text" maxlength="24" placeholder="e.g. 2.8.0" required />
+          </label>
+          <label class="field">
+            <span>Owner</span>
+            <input id="ownerInput" type="text" maxlength="60" placeholder="Release owner" required />
+          </label>
+          <label class="field">
+            <span>Environment</span>
+            <select id="environmentInput" required>
+              <option>Production</option>
+              <option>Staging</option>
+              <option>QA</option>
+              <option>Development</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Risk</span>
+            <select id="riskInput" required>
+              <option>Low</option>
+              <option selected>Medium</option>
+              <option>High</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Status</span>
+            <select id="statusInput" required>
+              <option>Planned</option>
+              <option>Ready</option>
+              <option>In Progress</option>
+              <option>Completed</option>
+              <option>Failed</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Planned date</span>
+            <input id="plannedDateInput" type="datetime-local" required />
+          </label>
+          <label class="field span-2">
+            <span>Change summary</span>
+            <textarea id="summaryInput" rows="4" maxlength="280" placeholder="Describe the purpose and scope of this release…" required></textarea>
+          </label>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="button danger ghost hidden" id="deleteRelease">Delete</button>
+          <div class="modal-footer-spacer"></div>
+          <button type="button" class="button secondary" id="cancelReleaseModal">Cancel</button>
+          <button type="submit" class="button primary" id="saveReleaseButton">Create release</button>
+        </div>
+      </form>
+    </section>
+  </div>
+
+  <div class="modal-backdrop hidden" id="confirmBackdrop" role="presentation">
+    <section class="modal confirm-modal" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+      <div class="confirm-icon">!</div>
+      <h2 id="confirmTitle">Delete release?</h2>
+      <p id="confirmText">This action removes the release from the demo workspace.</p>
+      <div class="confirm-actions">
+        <button class="button secondary" id="confirmCancel">Cancel</button>
+        <button class="button danger" id="confirmDelete">Delete release</button>
+      </div>
+    </section>
+  </div>
+
+  <div class="toast-region" id="toastRegion" aria-live="polite" aria-atomic="true"></div>
+
+  <script src="assets/js/data.js" defer></script>
+  <script src="assets/js/app.js" defer></script>
+</body>
+</html>
