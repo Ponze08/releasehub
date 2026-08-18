@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using ReleaseHub.Api.Data;
 using ReleaseHub.Api.Models;
 using ReleaseHub.Api.Services;
+using Xunit;
 
 namespace ReleaseHub.Api.Tests;
 
