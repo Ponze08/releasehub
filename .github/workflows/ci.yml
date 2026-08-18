@@ -7,7 +7,7 @@ on:
     branches: [ main ]
 
 jobs:
-  build:
+  build-and-test:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -18,8 +18,14 @@ jobs:
         with:
           dotnet-version: 8.0.x
 
-      - name: Restore
+      - name: Restore API
         run: dotnet restore backend/ReleaseHub.Api/ReleaseHub.Api.csproj
 
-      - name: Build
+      - name: Restore tests
+        run: dotnet restore backend/ReleaseHub.Api.Tests/ReleaseHub.Api.Tests.csproj
+
+      - name: Build API
         run: dotnet build backend/ReleaseHub.Api/ReleaseHub.Api.csproj --configuration Release --no-restore
+
+      - name: Test
+        run: dotnet test backend/ReleaseHub.Api.Tests/ReleaseHub.Api.Tests.csproj --configuration Release --no-restore --verbosity normal
