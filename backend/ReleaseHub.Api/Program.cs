@@ -1,55 +1,92 @@
+using Microsoft.EntityFrameworkCore;
+using ReleaseHub.Api.Data;
 using ReleaseHub.Api.Models;
 using ReleaseHub.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddSingleton<IReleaseService, InMemoryReleaseService>();
+var connectionString = builder.Configuration.GetConnectionString("ReleaseHub");
+if (string.IsNullOrWhiteSpace(connectionString))
+{
+    builder.Services.AddDbContext<ReleaseHubDbContext>(options => options.UseInMemoryDatabase("ReleaseHub"));
+}
+else
+{
+    builder.Services.AddDbContext<ReleaseHubDbContext>(options => options.UseSqlServer(connectionString));
+}
+
+builder.Services.AddScoped<IReleaseService, ReleaseService>();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
+
+var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
 builder.Services.AddCors(options =>
 {
-    options.AddDefaultPolicy(policy => policy
-        .AllowAnyOrigin()
-        .AllowAnyHeader()
-        .AllowAnyMethod());
+    options.AddDefaultPolicy(policy =>
+    {
+        if (allowedOrigins.Length == 0)
+        {
+            policy.AllowAnyOrigin();
+        }
+        else
+        {
+            policy.WithOrigins(allowedOrigins);
+        }
+
+        policy.AllowAnyHeader().AllowAnyMethod();
+    });
 });
 
 var app = builder.Build();
 app.UseCors();
 
-app.MapGet("/", () => Results.Ok(new
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
+
+await SeedAsync(app.Services);
+
+app.MapGet("/health", () => Results.Ok(new
 {
     service = "ReleaseHub.Api",
-    version = "1.0.0",
-    status = "ok"
+    status = "ok",
+    utc = DateTimeOffset.UtcNow
 }));
 
 var releases = app.MapGroup("/api/releases");
 
-releases.MapGet("/", (IReleaseService service) => Results.Ok(service.GetAll()));
+releases.MapGet("/", async (IReleaseService service, CancellationToken ct) =>
+    Results.Ok(await service.GetAllAsync(ct)));
 
-releases.MapGet("/{id:guid}", (Guid id, IReleaseService service) =>
-    service.Get(id) is { } item ? Results.Ok(item) : Results.NotFound());
+releases.MapGet("/{id:guid}", async (Guid id, IReleaseService service, CancellationToken ct) =>
+    await service.GetAsync(id, ct) is { } item ? Results.Ok(item) : Results.NotFound());
 
-releases.MapPost("/", (UpsertReleaseRequest request, IReleaseService service) =>
+releases.MapPost("/", async (UpsertReleaseRequest request, IReleaseService service, CancellationToken ct) =>
 {
     var validation = Validate(request);
     if (validation is not null) return Results.ValidationProblem(validation);
 
-    var created = service.Create(request);
+    var created = await service.CreateAsync(request, ct);
     return Results.Created($"/api/releases/{created.Id}", created);
 });
 
-releases.MapPut("/{id:guid}", (Guid id, UpsertReleaseRequest request, IReleaseService service) =>
+releases.MapPut("/{id:guid}", async (Guid id, UpsertReleaseRequest request, IReleaseService service, CancellationToken ct) =>
 {
     var validation = Validate(request);
     if (validation is not null) return Results.ValidationProblem(validation);
 
-    return service.Update(id, request) is { } updated
+    return await service.UpdateAsync(id, request, ct) is { } updated
         ? Results.Ok(updated)
         : Results.NotFound();
 });
 
-releases.MapDelete("/{id:guid}", (Guid id, IReleaseService service) =>
-    service.Delete(id) ? Results.NoContent() : Results.NotFound());
+releases.MapDelete("/{id:guid}", async (Guid id, IReleaseService service, CancellationToken ct) =>
+    await service.DeleteAsync(id, ct) ? Results.NoContent() : Results.NotFound());
+
+app.MapGet("/api/activity", async (IReleaseService service, CancellationToken ct) =>
+    Results.Ok(await service.GetActivityAsync(ct)));
 
 app.Run();
 
@@ -57,10 +94,10 @@ static Dictionary<string, string[]>? Validate(UpsertReleaseRequest request)
 {
     var errors = new Dictionary<string, string[]>();
 
-    if (string.IsNullOrWhiteSpace(request.Application)) errors["application"] = ["Application is required."];
-    if (string.IsNullOrWhiteSpace(request.Version)) errors["version"] = ["Version is required."];
-    if (string.IsNullOrWhiteSpace(request.Owner)) errors["owner"] = ["Owner is required."];
-    if (string.IsNullOrWhiteSpace(request.Summary)) errors["summary"] = ["Summary is required."];
+    ValidateText(request.Application, "application", 100, errors);
+    ValidateText(request.Version, "version", 30, errors);
+    ValidateText(request.Owner, "owner", 100, errors);
+    ValidateText(request.Summary, "summary", 500, errors);
 
     var environments = new[] { "Production", "Staging", "QA", "Development" };
     if (!environments.Contains(request.Environment)) errors["environment"] = ["Unknown environment."];
@@ -71,5 +108,38 @@ static Dictionary<string, string[]>? Validate(UpsertReleaseRequest request)
     var statuses = new[] { "Planned", "Ready", "In Progress", "Completed", "Failed" };
     if (!statuses.Contains(request.Status)) errors["status"] = ["Unknown status."];
 
+    if (request.PlannedDate == default) errors["plannedDate"] = ["Planned date is required."];
+
     return errors.Count == 0 ? null : errors;
 }
+
+static void ValidateText(string? value, string key, int maxLength, Dictionary<string, string[]> errors)
+{
+    if (string.IsNullOrWhiteSpace(value))
+    {
+        errors[key] = ["This field is required."];
+        return;
+    }
+
+    if (value.Trim().Length > maxLength)
+        errors[key] = [$"Maximum length is {maxLength} characters."];
+}
+
+static async Task SeedAsync(IServiceProvider services)
+{
+    await using var scope = services.CreateAsyncScope();
+    var db = scope.ServiceProvider.GetRequiredService<ReleaseHubDbContext>();
+    await db.Database.EnsureCreatedAsync();
+
+    if (await db.Releases.AnyAsync()) return;
+
+    var now = DateTimeOffset.UtcNow;
+    db.Releases.AddRange(
+        new ReleaseItem { Id = Guid.NewGuid(), Application = "Customer Portal", Version = "2.8.0", Environment = "Production", Owner = "Andrea Ponzellini", Risk = "Medium", Status = "Ready", PlannedDate = now.AddDays(1), Summary = "Accessibility improvements and API validation fixes.", CreatedAt = now.AddDays(-6), UpdatedAt = now.AddHours(-3) },
+        new ReleaseItem { Id = Guid.NewGuid(), Application = "Orders API", Version = "4.12.1", Environment = "Production", Owner = "M. Keller", Risk = "High", Status = "In Progress", PlannedDate = now.AddHours(4), Summary = "Database index changes and queue retry logic.", CreatedAt = now.AddDays(-8), UpdatedAt = now.AddHours(-1) },
+        new ReleaseItem { Id = Guid.NewGuid(), Application = "Inventory Sync", Version = "1.9.4", Environment = "Staging", Owner = "S. Romano", Risk = "Low", Status = "Completed", PlannedDate = now.AddDays(-1), Summary = "Incremental synchronization and improved diagnostics.", CreatedAt = now.AddDays(-9), UpdatedAt = now.AddDays(-1) });
+
+    await db.SaveChangesAsync();
+}
+
+public partial class Program;
