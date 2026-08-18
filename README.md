@@ -1,5 +1,8 @@
 # ReleaseHub
 
+[![CI](https://github.com/Ponze08/releasehub/actions/workflows/ci.yml/badge.svg)](https://github.com/Ponze08/releasehub/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 **Release & change management dashboard built with JavaScript, ASP.NET Core 8, EF Core and SQL Server.**
 
 ReleaseHub is a portfolio project for planning, tracking and auditing software releases across multiple applications and environments. The browser interface can run as a self-contained demo, while the backend provides a real ASP.NET Core API with persistent storage support.
@@ -17,9 +20,10 @@ ReleaseHub is a portfolio project for planning, tracking and auditing software r
 - EF Core persistence with SQL Server support
 - In-memory database fallback for zero-configuration development
 - Swagger/OpenAPI in Development
-- Configurable CORS policy
+- Configurable CORS policy and Problem Details error handling
+- Database-aware health endpoint
 - Automated API service tests
-- GitHub Actions build and test pipeline
+- GitHub Actions build/test pipeline and Pages deployment workflow
 
 ## Architecture
 
@@ -60,7 +64,9 @@ releasehub/
 │  └─ ReleaseHub.Api.Tests/
 ├─ database/schema.sql
 ├─ docs/ARCHITECTURE.md
-└─ .github/workflows/ci.yml
+└─ .github/workflows/
+   ├─ ci.yml
+   └─ pages.yml
 ```
 
 ## Run the frontend
@@ -104,6 +110,8 @@ The health endpoint is:
 /health
 ```
 
+The health response also reports the active EF Core provider and returns a service-unavailable response if the configured database cannot be reached.
+
 ## SQL Server configuration
 
 Set the `ConnectionStrings__ReleaseHub` environment variable or configure `ConnectionStrings:ReleaseHub` in your local application settings.
@@ -135,14 +143,16 @@ cd backend/ReleaseHub.Api.Tests
 dotnet test
 ```
 
-The test suite verifies release creation, status-change auditing and delete behavior. GitHub Actions runs the build and tests for feature branches and pull requests.
+The test suite verifies release creation, status-change auditing and delete behavior. GitHub Actions runs build and tests for feature branches, pull requests and `main`.
 
 ## Security and resilience details
 
 - Browser-rendered user content is HTML-escaped before insertion.
 - CSV exports neutralize spreadsheet formula prefixes to reduce CSV injection risk.
 - API input is validated for required fields, maximum lengths and known enum-like values.
-- CORS origins are configurable instead of being hardcoded into application logic.
+- CORS is restricted to configured origins outside Development.
+- Unhandled API exceptions use ASP.NET Core Problem Details responses.
+- SQL Server connections use transient-failure retry support.
 - Demo seed dates are generated relative to the current date so the dashboard remains current.
 
 ## Data
